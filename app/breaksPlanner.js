@@ -3,10 +3,11 @@ const EventEmitter = require('events')
 const NaturalBreaksManager = require('./utils/naturalBreaksManager')
 const DndManager = require('./utils/dndManager')
 const AppExclusionsManager = require('./utils/appExclusionsManager')
+const VideoCallManager = require('./utils/videoCallManager')
 const log = require('electron-log/main')
 
 class BreaksPlanner extends EventEmitter {
-  constructor (settings) {
+  constructor(settings) {
     super()
     this.settings = settings
     this.breakNumber = 0
@@ -16,6 +17,7 @@ class BreaksPlanner extends EventEmitter {
     this.naturalBreaksManager = new NaturalBreaksManager(settings)
     this.dndManager = new DndManager(settings)
     this.appExclusionsManager = new AppExclusionsManager(settings)
+    this.videoCallManager = new VideoCallManager(settings)
 
     this.on('microbreakStarted', (shouldPlaySound) => {
       const interval = this.settings.get('microbreakDuration')
@@ -107,9 +109,37 @@ class BreaksPlanner extends EventEmitter {
         }
       }
     })
+
+    this.videoCallManager.on('videoCallStarted', () => {
+      if (!this.isPaused && this.scheduler.reference !== 'finishMicrobreak' && this.scheduler.reference !== 'finishBreak' && this.scheduler.reference !== null) {
+        this.clear()
+        log.info('Stretchly: pausing breaks for video call')
+        this.emit('updateToolTip')
+      } else if (!this.isPaused && this.scheduler.reference === 'finishBreak') {
+        this.emit('finishBreak', false, false)
+        this.clear()
+        log.info('Stretchly: closing current break and pausing for video call')
+        this.emit('updateToolTip')
+      } else if (!this.isPaused && this.scheduler.reference === 'finishMicrobreak') {
+        this.emit('finishMicrobreak', false, false)
+        this.clear()
+        log.info('Stretchly: closing current microbreak and pausing for video call')
+        this.emit('updateToolTip')
+      } else {
+        this.videoCallManager.isInVideoCall = false
+      }
+    })
+
+    this.videoCallManager.on('videoCallFinished', () => {
+      if (!this.isPaused && this.scheduler.reference !== 'finishMicrobreak' && this.scheduler.reference !== 'finishBreak') {
+        this.reset()
+        log.info('Stretchly: resuming breaks after video call')
+        this.emit('updateToolTip')
+      }
+    })
   }
 
-  nextBreak () {
+  nextBreak() {
     this.postponesNumber = 0
     if (this.scheduler) this.scheduler.cancel()
     const shouldBreak = this.settings.get('break')
@@ -151,7 +181,7 @@ class BreaksPlanner extends EventEmitter {
     this.scheduler.plan()
   }
 
-  nextBreakAfterNotification () {
+  nextBreakAfterNotification() {
     this.scheduler.cancel()
     const scheduledBreakType = this._scheduledBreakType
     const breakNotificationInterval = this.settings.get(`${scheduledBreakType}NotificationInterval`)
@@ -160,7 +190,7 @@ class BreaksPlanner extends EventEmitter {
     this.scheduler.plan()
   }
 
-  postponeCurrentBreak () {
+  postponeCurrentBreak() {
     this.scheduler.cancel()
     this.postponesNumber += 1
     let postponeTime, eventName
@@ -178,7 +208,7 @@ class BreaksPlanner extends EventEmitter {
     this.emit('updateToolTip')
   }
 
-  skipToMicrobreak (delay = 100) {
+  skipToMicrobreak(delay = 100) {
     this.scheduler.cancel()
     const shouldBreak = this.settings.get('break')
     const shouldMicrobreak = this.settings.get('microbreak')
@@ -193,7 +223,7 @@ class BreaksPlanner extends EventEmitter {
     this.emit('updateToolTip')
   }
 
-  skipToBreak (delay = 100) {
+  skipToBreak(delay = 100) {
     this.scheduler.cancel()
     const shouldBreak = this.settings.get('break')
     const shouldMicrobreak = this.settings.get('microbreak')
@@ -206,13 +236,13 @@ class BreaksPlanner extends EventEmitter {
     this.emit('updateToolTip')
   }
 
-  clear () {
+  clear() {
     this.scheduler.cancel()
     this.breakNumber = 0
     this.postponesNumber = 0
   }
 
-  pause (milliseconds) {
+  pause(milliseconds) {
     this.clear()
     this.isPaused = true
     if (milliseconds !== 1) {
@@ -221,23 +251,23 @@ class BreaksPlanner extends EventEmitter {
     }
   }
 
-  resume () {
+  resume() {
     this.scheduler.cancel()
     this.isPaused = false
     this.appExclusionsManager.reset()
     this.nextBreak()
   }
 
-  correctScheduler () {
+  correctScheduler() {
     if (this.scheduler) this.scheduler.correct()
   }
 
-  reset () {
+  reset() {
     this.clear()
     this.resume()
   }
 
-  get _scheduledBreakType () {
+  get _scheduledBreakType() {
     const shouldBreak = this.settings.get('break')
     const shouldMicrobreak = this.settings.get('microbreak')
     const breakInterval = this.settings.get('breakInterval') + 1
@@ -252,7 +282,7 @@ class BreaksPlanner extends EventEmitter {
     return scheduledBreakType
   }
 
-  naturalBreaks (shouldUse) {
+  naturalBreaks(shouldUse) {
     if (shouldUse) {
       this.naturalBreaksManager.start()
     } else {
@@ -260,7 +290,7 @@ class BreaksPlanner extends EventEmitter {
     }
   }
 
-  doNotDisturb (shouldUse) {
+  doNotDisturb(shouldUse) {
     if (shouldUse) {
       this.dndManager.start()
     } else {
@@ -271,7 +301,18 @@ class BreaksPlanner extends EventEmitter {
     }
   }
 
-  get timeToNextBreak () {
+  videoCallDetection(shouldUse) {
+    if (shouldUse) {
+      this.videoCallManager.start()
+    } else {
+      this.videoCallManager.stop()
+      if (!this.isPaused && this.scheduler.reference === null) {
+        this.reset()
+      }
+    }
+  }
+
+  get timeToNextBreak() {
     if (this.scheduler.reference === 'startMicrobreak' || this.scheduler.reference === 'startBreak') {
       return this.scheduler.timeLeft
     }

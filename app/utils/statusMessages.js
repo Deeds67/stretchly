@@ -2,9 +2,10 @@ const i18next = require('i18next')
 const Utils = require('./utils')
 
 class StatusMessages {
-  constructor ({ breakPlanner, settings }) {
+  constructor({ breakPlanner, settings }) {
     this.reference = breakPlanner.scheduler.reference
     this.doNotDisturb = breakPlanner.dndManager.isOnDnd
+    this.videoCallActive = breakPlanner.videoCallManager.isInVideoCall
     this.appExclusionPause = breakPlanner.appExclusionsManager.isSchedulerCleared
     this.timeLeft = breakPlanner.scheduler.timeLeft
     this.timeToNextBreak = breakPlanner.timeToNextBreak
@@ -13,7 +14,7 @@ class StatusMessages {
     this.settings = settings
   }
 
-  get trayMessage () {
+  get trayMessage() {
     let message = ''
     if (this.reference === 'finishMicrobreak' || this.reference === 'finishBreak') {
       return message
@@ -34,6 +35,11 @@ class StatusMessages {
 
     if (this.doNotDisturb) {
       message += i18next.t('statusMessages.paused') + ' - ' + i18next.t('statusMessages.dndMode')
+      return message
+    }
+
+    if (this.videoCallActive) {
+      message += i18next.t('statusMessages.paused') + ' - ' + i18next.t('statusMessages.videoCallMode')
       return message
     }
 

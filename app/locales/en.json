@@ -48,6 +48,7 @@
       "allScreens": "Shows breaks on all monitors",
       "monitorIdleTime": "Monitor system idle time (breaks are paused if system is idle).",
       "monitorDnd": "Show breaks even in Do Not Disturb mode",
+      "pauseForVideoCalls": "Pause breaks while video calls or video conferences are active",
       "language": "Select language:",
       "restoreDefaults": "Restore defaults"
     },
@@ -204,6 +205,7 @@
     "paused": "Paused",
     "indefinitely": "Indefinitely",
     "dndMode": "Do Not Disturb is on",
+    "videoCallMode": "Video call is active",
     "appExclusion": "App exclusion rule",
     "nextLongBreak": "Next Long Break",
     "nextMiniBreak": "Next Mini Break",

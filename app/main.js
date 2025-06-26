@@ -26,7 +26,7 @@ process.on('uncaughtException', (err, _) => {
   })
 })
 
-nativeTheme.on('updated', function theThemeHasChanged () {
+nativeTheme.on('updated', function theThemeHasChanged() {
   if (!gotTheLock) {
     return
   }
@@ -162,7 +162,7 @@ app.on('window-all-closed', () => {
 })
 app.on('before-quit', (event) => {
   if ((breakPlanner.scheduler.reference === 'finishMicrobreak' && settings.get('microbreakStrictMode')) ||
-      (breakPlanner.scheduler.reference === 'finishBreak' && settings.get('breakStrictMode'))
+    (breakPlanner.scheduler.reference === 'finishBreak' && settings.get('breakStrictMode'))
   ) {
     log.info('Stretchly: preventing app closure (in break with strict mode)')
     event.preventDefault()
@@ -172,7 +172,7 @@ app.on('before-quit', (event) => {
   }
 })
 
-async function initialize (isAppStart = true) {
+async function initialize(isAppStart = true) {
   if (!gotTheLock) {
     return
   }
@@ -238,6 +238,7 @@ async function initialize (isAppStart = true) {
     breakPlanner.clear()
     breakPlanner.appExclusionsManager.reinitialize(settings)
     breakPlanner.doNotDisturb(settings.get('monitorDnd'))
+    breakPlanner.videoCallDetection(settings.get('pauseForVideoCalls'))
     breakPlanner.naturalBreaks(settings.get('naturalBreaks'))
     breakPlanner.nextBreak()
   }
@@ -291,7 +292,7 @@ async function initialize (isAppStart = true) {
   updateTray()
 }
 
-function startI18next () {
+function startI18next() {
   i18next
     .use(Backend)
     .init({
@@ -321,10 +322,11 @@ i18next.on('languageChanged', async function (lng) {
   loadIdeas()
 })
 
-function onSuspendOrLock () {
+function onSuspendOrLock() {
   log.info('System: suspend or lock')
   if (settings.get('pauseForSuspendOrLock')) {
     if (breakPlanner.isPaused || breakPlanner.dndManager.isOnDnd ||
+      breakPlanner.videoCallManager.isInVideoCall ||
       breakPlanner.naturalBreaksManager.isSchedulerCleared ||
       breakPlanner.appExclusionsManager.isSchedulerCleared) {
       log.info('Stretchly: not pausing for suspendOrLock because paused already')
@@ -336,7 +338,7 @@ function onSuspendOrLock () {
   }
 }
 
-function onResumeOrUnlock () {
+function onResumeOrUnlock() {
   log.info('System: resume or unlock')
   if (pausedForSuspendOrLock) {
     pausedForSuspendOrLock = false
@@ -348,7 +350,7 @@ function onResumeOrUnlock () {
   updateTray()
 }
 
-function startPowerMonitoring () {
+function startPowerMonitoring() {
   const electron = require('electron')
   electron.powerMonitor.on('suspend', onSuspendOrLock)
   electron.powerMonitor.on('lock-screen', onSuspendOrLock)
@@ -356,12 +358,12 @@ function startPowerMonitoring () {
   electron.powerMonitor.on('unlock-screen', onResumeOrUnlock)
 }
 
-function numberOfDisplays () {
+function numberOfDisplays() {
   const electron = require('electron')
   return electron.screen.getAllDisplays().length
 }
 
-function closeWindows (windowArray) {
+function closeWindows(windowArray) {
   for (const window of windowArray) {
     window.hide()
     if (windowArray[0] === window) {
@@ -373,7 +375,7 @@ function closeWindows (windowArray) {
   return null
 }
 
-function displaysX (displayID = -1, width = 800, fullscreen = false) {
+function displaysX(displayID = -1, width = 800, fullscreen = false) {
   const electron = require('electron')
   let theScreen
 
@@ -404,7 +406,7 @@ function displaysX (displayID = -1, width = 800, fullscreen = false) {
   }
 }
 
-function displaysY (displayID = -1, height = 600, fullscreen = false) {
+function displaysY(displayID = -1, height = 600, fullscreen = false) {
   const electron = require('electron')
   let theScreen
 
@@ -435,7 +437,7 @@ function displaysY (displayID = -1, height = 600, fullscreen = false) {
   }
 }
 
-function displaysWidth (displayID = -1) {
+function displaysWidth(displayID = -1) {
   const electron = require('electron')
   let theScreen
 
@@ -462,7 +464,7 @@ function displaysWidth (displayID = -1) {
   return Math.ceil(bounds.width)
 }
 
-function displaysHeight (displayID = -1) {
+function displaysHeight(displayID = -1) {
   const electron = require('electron')
   let theScreen
 
@@ -489,11 +491,12 @@ function displaysHeight (displayID = -1) {
   return Math.ceil(bounds.height)
 }
 
-function trayIconPath () {
+function trayIconPath() {
   const params = {
     paused:
       breakPlanner.isPaused ||
       breakPlanner.dndManager.isOnDnd ||
+      breakPlanner.videoCallManager.isInVideoCall ||
       breakPlanner.naturalBreaksManager.isSchedulerCleared ||
       breakPlanner.appExclusionsManager.isSchedulerCleared,
     monochrome: settings.get('useMonochromeTrayIcon'),
@@ -509,7 +512,7 @@ function trayIconPath () {
   return pathToTrayIcon
 }
 
-function windowIconPath () {
+function windowIconPath() {
   const unusedParams = null
   const params = {
     paused: false,
@@ -524,7 +527,7 @@ function windowIconPath () {
   return path.join(__dirname, '/images/app-icons', windowIconFileName)
 }
 
-function startProcessWin () {
+function startProcessWin() {
   if (processWin) {
     planVersionCheck()
     return
@@ -546,7 +549,7 @@ function startProcessWin () {
   })
 }
 
-function createWelcomeWindow (isAppStart = true) {
+function createWelcomeWindow(isAppStart = true) {
   if (settings.get('isFirstRun') && isAppStart) {
     const modalPath = path.join('file://', __dirname, '/welcome.html')
     welcomeWin = new BrowserWindow({
@@ -576,7 +579,7 @@ function createWelcomeWindow (isAppStart = true) {
   }
 }
 
-function createContributorSettingsWindow () {
+function createContributorSettingsWindow() {
   if (contributorPreferencesWindow) {
     contributorPreferencesWindow.show()
     return
@@ -607,7 +610,7 @@ function createContributorSettingsWindow () {
   }, 0)
 }
 
-function createSyncPreferencesWindow () {
+function createSyncPreferencesWindow() {
   if (syncPreferencesWindow) {
     syncPreferencesWindow.show()
     return
@@ -641,7 +644,7 @@ function createSyncPreferencesWindow () {
   }, 0)
 }
 
-function planVersionCheck (seconds = 1) {
+function planVersionCheck(seconds = 1) {
   if (updateChecker) {
     clearInterval(updateChecker)
     updateChecker = null
@@ -649,7 +652,7 @@ function planVersionCheck (seconds = 1) {
   updateChecker = setTimeout(checkVersion, seconds * 1000)
 }
 
-function checkVersion () {
+function checkVersion() {
   if (settings.get('checkNewVersion')) {
     processWin.webContents.send('checkVersion', {
       oldVersion: `v${app.getVersion()}`,
@@ -660,21 +663,21 @@ function checkVersion () {
   }
 }
 
-function startMicrobreakNotification () {
+function startMicrobreakNotification() {
   showNotification(i18next.t('main.microbreakIn', { seconds: settings.get('microbreakNotificationInterval') / 1000 }))
   log.info('Stretchly: showing Mini Break notification')
   breakPlanner.nextBreakAfterNotification()
   updateTray()
 }
 
-function startBreakNotification () {
+function startBreakNotification() {
   showNotification(i18next.t('main.breakIn', { seconds: settings.get('breakNotificationInterval') / 1000 }))
   log.info('Stretchly: showing Long Break notification')
   breakPlanner.nextBreakAfterNotification()
   updateTray()
 }
 
-function getBlurredBackgroundWindowOptions () {
+function getBlurredBackgroundWindowOptions() {
   if (!settings.get('blurredBackground')) {
     return {}
   }
@@ -690,7 +693,7 @@ function getBlurredBackgroundWindowOptions () {
   }
 }
 
-function startMicrobreak () {
+function startMicrobreak() {
   // don't start another break if break running
   if (microbreakWins) {
     log.warn('Stretchly: Mini Break already running, not starting Mini Break')
@@ -841,7 +844,7 @@ function startMicrobreak () {
   }
 }
 
-function startBreak () {
+function startBreak() {
   if (breakWins) {
     log.warn('Stretchly: Long Break already running, not starting Long Break')
     return
@@ -992,7 +995,7 @@ function startBreak () {
   }
 }
 
-function breakComplete (shouldPlaySound, windows, breakType) {
+function breakComplete(shouldPlaySound, windows, breakType) {
   if (settings.get('endBreakShortcut') && globalShortcut.isRegistered(settings.get('endBreakShortcut'))) {
     globalShortcut.unregister(settings.get('endBreakShortcut'))
   }
@@ -1007,7 +1010,7 @@ function breakComplete (shouldPlaySound, windows, breakType) {
   return closeWindows(windows)
 }
 
-function finishMicrobreak (shouldPlaySound = true, shouldPlanNext = true) {
+function finishMicrobreak(shouldPlaySound = true, shouldPlanNext = true) {
   microbreakWins = breakComplete(shouldPlaySound, microbreakWins, 'mini')
   log.info(`Stretchly: finishing Mini Break (shouldPlanNext: ${shouldPlanNext})`)
   if (shouldPlanNext) {
@@ -1018,7 +1021,7 @@ function finishMicrobreak (shouldPlaySound = true, shouldPlanNext = true) {
   updateTray()
 }
 
-function finishBreak (shouldPlaySound = true, shouldPlanNext = true) {
+function finishBreak(shouldPlaySound = true, shouldPlanNext = true) {
   breakWins = breakComplete(shouldPlaySound, breakWins, 'long')
   log.info(`Stretchly: finishing Long Break (shouldPlanNext: ${shouldPlanNext})`)
   if (shouldPlanNext) {
@@ -1027,21 +1030,21 @@ function finishBreak (shouldPlaySound = true, shouldPlanNext = true) {
   updateTray()
 }
 
-function postponeMicrobreak (shouldPlaySound = false) {
+function postponeMicrobreak(shouldPlaySound = false) {
   microbreakWins = breakComplete(shouldPlaySound, microbreakWins)
   breakPlanner.postponeCurrentBreak()
   log.info('Stretchly: postponing Mini Break')
   updateTray()
 }
 
-function postponeBreak (shouldPlaySound = false) {
+function postponeBreak(shouldPlaySound = false) {
   breakWins = breakComplete(shouldPlaySound, breakWins)
   breakPlanner.postponeCurrentBreak()
   log.info('Stretchly: postponing Long Break')
   updateTray()
 }
 
-function skipToMicrobreak (delay) {
+function skipToMicrobreak(delay) {
   if (microbreakWins) {
     microbreakWins = breakComplete(false, microbreakWins)
   }
@@ -1058,7 +1061,7 @@ function skipToMicrobreak (delay) {
   updateTray()
 }
 
-function skipToBreak (delay) {
+function skipToBreak(delay) {
   if (microbreakWins) {
     microbreakWins = breakComplete(false, microbreakWins)
   }
@@ -1075,7 +1078,7 @@ function skipToBreak (delay) {
   updateTray()
 }
 
-function resetBreaks () {
+function resetBreaks() {
   if (microbreakWins) {
     microbreakWins = breakComplete(false, microbreakWins)
   }
@@ -1087,7 +1090,7 @@ function resetBreaks () {
   updateTray()
 }
 
-function calculateBackgroundColor (color) {
+function calculateBackgroundColor(color) {
   let opacityMultiplier = 1
   if (settings.get('transparentMode')) {
     opacityMultiplier = settings.get('opacity')
@@ -1095,7 +1098,7 @@ function calculateBackgroundColor (color) {
   return color + Math.round(opacityMultiplier * 255).toString(16).padStart(2, '0')
 }
 
-function loadIdeas () {
+function loadIdeas() {
   let longBreakIdeasData
   let miniBreakIdeasData
   if (settings.get('useIdeasFromSettings')) {
@@ -1122,7 +1125,7 @@ function loadIdeas () {
   microbreakIdeas = new IdeasLoader(miniBreakIdeasData).ideas()
 }
 
-function pauseBreaks (milliseconds) {
+function pauseBreaks(milliseconds) {
   if (microbreakWins) {
     finishMicrobreak(false)
   }
@@ -1134,9 +1137,11 @@ function pauseBreaks (milliseconds) {
   updateTray()
 }
 
-function resumeBreaks (notify = true) {
+function resumeBreaks(notify = true) {
   if (breakPlanner.dndManager.isOnDnd) {
     log.info('Stretchly: not resuming breaks because in Do Not Disturb')
+  } else if (breakPlanner.videoCallManager.isInVideoCall) {
+    log.info('Stretchly: not resuming breaks because in video call')
   } else {
     breakPlanner.resume()
     log.info('Stretchly: resuming breaks')
@@ -1147,7 +1152,7 @@ function resumeBreaks (notify = true) {
   updateTray()
 }
 
-function createPreferencesWindow () {
+function createPreferencesWindow() {
   const electron = require('electron')
   if (preferencesWin) {
     preferencesWin.show()
@@ -1182,7 +1187,7 @@ function createPreferencesWindow () {
   }, 0)
 }
 
-function updateTray () {
+function updateTray() {
   if (process.platform === 'darwin') {
     if (app.dock.isVisible) {
       app.dock.hide()
@@ -1224,7 +1229,7 @@ function updateTray () {
   }
 }
 
-function getTrayMenuTemplate () {
+function getTrayMenuTemplate() {
   const trayMenu = []
 
   if (global.shared.isNewVersion) {
@@ -1259,15 +1264,15 @@ function getTrayMenuTemplate () {
   }
 
   if ((breakPlanner.scheduler.reference === 'finishMicrobreak' && settings.get('microbreakStrictMode') &&
-        !settings.get('showTrayMenuInStrictMode')) ||
-      (breakPlanner.scheduler.reference === 'finishBreak' && settings.get('breakStrictMode') &&
+    !settings.get('showTrayMenuInStrictMode')) ||
+    (breakPlanner.scheduler.reference === 'finishBreak' && settings.get('breakStrictMode') &&
       !settings.get('showTrayMenuInStrictMode'))
   ) {
     // empty menu, we are in strict mode
     return trayMenu
   }
 
-  if (!(breakPlanner.isPaused || breakPlanner.dndManager.isOnDnd || breakPlanner.appExclusionsManager.isSchedulerCleared)) {
+  if (!(breakPlanner.isPaused || breakPlanner.dndManager.isOnDnd || breakPlanner.videoCallManager.isInVideoCall || breakPlanner.appExclusionsManager.isSchedulerCleared)) {
     let submenu = []
     if (settings.get('microbreak')) {
       submenu = submenu.concat([{
@@ -1297,7 +1302,7 @@ function getTrayMenuTemplate () {
         updateTray()
       }
     })
-  } else if (!(breakPlanner.dndManager.isOnDnd || breakPlanner.appExclusionsManager.isSchedulerCleared)) {
+  } else if (!(breakPlanner.dndManager.isOnDnd || breakPlanner.videoCallManager.isInVideoCall || breakPlanner.appExclusionsManager.isSchedulerCleared)) {
     trayMenu.push({
       label: i18next.t('main.pause'),
       submenu: [
@@ -1383,7 +1388,7 @@ function getTrayMenuTemplate () {
   return trayMenu
 }
 
-function updateToolTip () {
+function updateToolTip() {
   const StatusMessages = require('./utils/statusMessages')
   let trayMessage = i18next.t('main.toolTipHeader')
   const message = new StatusMessages({
@@ -1398,7 +1403,7 @@ function updateToolTip () {
   }
 }
 
-function showNotification (text) {
+function showNotification(text) {
   processWin.webContents.send('showNotification', {
     text,
     silent: settings.get('silentNotifications')
@@ -1428,6 +1433,10 @@ ipcMain.on('save-setting', function (event, key, value) {
 
   if (key === 'monitorDnd') {
     breakPlanner.doNotDisturb(value)
+  }
+
+  if (key === 'pauseForVideoCalls') {
+    breakPlanner.videoCallDetection(value)
   }
 
   if (key === 'language') {
@@ -1492,7 +1501,7 @@ ipcMain.on('send-settings', async function (event) {
   event.sender.send('renderSettings', await settingsToSend())
 })
 
-async function settingsToSend () {
+async function settingsToSend() {
   return Object.assign({}, settings.store, { openAtLogin: await autostartManager.autoLaunchStatus() })
 }
 

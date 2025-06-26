@@ -47,6 +47,8 @@ module.exports = {
   useMonochromeInvertedTrayIcon: false,
   silentNotifications: false,
   monitorDnd: true,
+  pauseForVideoCalls: false,
+  videoCallDetectionCheckInterval: 5000,
   microbreakStartSoundPlaying: false,
   breakStartSoundPlaying: false,
   themeSource: 'system',
